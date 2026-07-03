@@ -959,7 +959,7 @@ function goShops(){
 function goProducts(shop){
   // Получаем токен из localStorage
   var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
-  shop.token = localShops[shop.id] || shop.token || '';
+  shop.token = localShops[String(shop.id)] || shop.token || '';
   curShop=shop;
   ['s1','s2','s3'].forEach(function(s){var el=document.getElementById(s);if(el)el.style.display='none';});
   document.getElementById('s2').style.display='block';
@@ -1024,7 +1024,7 @@ function renderShops(){
     var d=document.createElement('div');d.className='shop-card';
     var delBtn=isStaff?'':'<button class="shop-del-btn" onclick="event.stopPropagation();deleteShop('+s.id+')">&#10005; Удалить</button>';
     var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
-    var hasToken=!!localShops[s.id];
+    var hasToken=!!localShops[String(s.id)];
     var hint=hasToken?'Нажмите чтобы открыть':'<span style="color:#f87171">&#128274; Нет токена на этом устройстве</span>';
     d.innerHTML='<div class="shop-icon">'+icons[i%icons.length]+'</div><div class="shop-name">'+s.name+'</div><div class="shop-hint">'+hint+'</div>'+delBtn;
     d.onclick=function(){goProducts(s);};
@@ -1055,7 +1055,12 @@ function saveShop(){
   if(!name){showErr('Введите название магазина');return;}
   if(!token){showErr('Введите API-токен');return;}
   var id=Date.now();
-  fbSet('/shops/'+id, {id:id,name:name,token:token});
+  // Сохраняем токен локально
+  var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
+  localShops[String(id)]=token;
+  localStorage.setItem('wb_tokens',JSON.stringify(localShops));
+  // В Firebase только название без токена
+  fbSet('/shops/'+id, {id:id,name:name});
   closeModal();
 }
 
