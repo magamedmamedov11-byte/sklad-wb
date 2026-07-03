@@ -749,7 +749,7 @@ header{
     <h2>Добавить магазин</h2>
     <div class="err" id="modal-err"></div>
     <div class="field"><label>Название магазина</label><input type="text" id="m-name" placeholder="Турецкий мир"></div>
-    <div class="field"><label>API-токен Wildberries</label><textarea id="m-token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea></div>
+    <div class="field"><label>API-токен Wildberries</label><textarea id="m-token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea><div style="font-size:11px;color:#22c55e;margin-top:5px;">&#128274; Токен хранится только на этом устройстве</div></div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveShop()">Сохранить</button>
@@ -957,6 +957,9 @@ function goShops(){
   renderShops();
 }
 function goProducts(shop){
+  // Получаем токен из localStorage
+  var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
+  shop.token = localShops[shop.id] || shop.token || '';
   curShop=shop;
   ['s1','s2','s3'].forEach(function(s){var el=document.getElementById(s);if(el)el.style.display='none';});
   document.getElementById('s2').style.display='block';
@@ -1020,7 +1023,10 @@ function renderShops(){
   shops.forEach(function(s,i){
     var d=document.createElement('div');d.className='shop-card';
     var delBtn=isStaff?'':'<button class="shop-del-btn" onclick="event.stopPropagation();deleteShop('+s.id+')">&#10005; Удалить</button>';
-    d.innerHTML='<div class="shop-icon">'+icons[i%icons.length]+'</div><div class="shop-name">'+s.name+'</div><div class="shop-hint">Нажмите чтобы открыть</div>'+delBtn;
+    var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
+    var hasToken=!!localShops[s.id];
+    var hint=hasToken?'Нажмите чтобы открыть':'<span style="color:#f87171">&#128274; Нет токена на этом устройстве</span>';
+    d.innerHTML='<div class="shop-icon">'+icons[i%icons.length]+'</div><div class="shop-name">'+s.name+'</div><div class="shop-hint">'+hint+'</div>'+delBtn;
     d.onclick=function(){goProducts(s);};
     grid.appendChild(d);
   });
@@ -1033,6 +1039,10 @@ function renderShops(){
 }
 function deleteShop(id){
   if(!confirm('Удалить этот магазин?'))return;
+  // Удаляем локальный токен
+  var localShops=JSON.parse(localStorage.getItem('wb_tokens')||'{}');
+  delete localShops[id];
+  localStorage.setItem('wb_tokens',JSON.stringify(localShops));
   fbDelete('/shops/'+id);
 }
 
