@@ -1095,40 +1095,62 @@ function renderNotes(){
   });
 }
 
+function mapCard(c){
+  var color='';
+  if(c.characteristics){
+    var cc=c.characteristics.find(function(x){return x.name==='Цвет'||x.name==='цвет';});
+    if(cc&&cc.value)color=Array.isArray(cc.value)?cc.value[0]:cc.value;
+  }
+  return{
+    nmID:c.nmID,vendorCode:c.vendorCode,brand:c.brand,title:c.title,color:color,
+    barcode:(c.sizes&&c.sizes[0]&&c.sizes[0].skus&&c.sizes[0].skus[0])||'',
+    photo:(c.photos&&c.photos[0]&&(c.photos[0].big||c.photos[0].tm))||''
+  };
+}
+
 async function loadProds(shop){
   var grid=document.getElementById('prod-grid');
   var errEl=document.getElementById('prod-err');
   errEl.innerHTML='';
   grid.innerHTML='<div class="loading"><div class="spinner"></div><span>Загружаем товары...</span></div>';
   allProds=[];
+
   try{
-    var resp=await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list',{
-      method:'POST',
-      headers:{'Authorization':shop.token,'Content-Type':'application/json'},
-      body:JSON.stringify({settings:{cursor:{limit:100},filter:{withPhoto:-1}}})
-    });
-    if(!resp.ok){var er=await resp.json().catch(function(){return{};});throw new Error(er.errorText||'Ошибка '+resp.status);}
-    var data=await resp.json();
-    var cards=data.cards||[];
-    if(!cards.length){grid.innerHTML='<div class="loading"><span>Товаров не найдено</span></div>';return;}
-    allProds=cards.map(function(c){
-      var color='';
-      if(c.characteristics){
-        var cc=c.characteristics.find(function(x){return x.name==='Цвет'||x.name==='цвет';});
-        if(cc&&cc.value)color=Array.isArray(cc.value)?cc.value[0]:cc.value;
-      }
-      return{
-        nmID:c.nmID,
-        vendorCode:c.vendorCode,
-        brand:c.brand,
-        title:c.title,
-        color:color,
-        barcode:(c.sizes&&c.sizes[0]&&c.sizes[0].skus&&c.sizes[0].skus[0])||'',
-        photo:(c.photos&&c.photos[0]&&(c.photos[0].big||c.photos[0].tm))||''
-      };
-    });
+    var cursor={limit:100};
+    var total=0;
+
+    // Загружаем все страницы в цикле
+    while(true){
+      var body={settings:{cursor:cursor,filter:{withPhoto:-1}}};
+      var resp=await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list',{
+        method:'POST',
+        headers:{'Authorization':shop.token,'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+      if(!resp.ok){var er=await resp.json().catch(function(){return{};});throw new Error(er.errorText||'Ошибка '+resp.status);}
+      var data=await resp.json();
+      var cards=data.cards||[];
+      if(!cards.length) break;
+
+      allProds=allProds.concat(cards.map(mapCard));
+      total+=cards.length;
+
+      // Показываем прогресс
+      grid.innerHTML='<div class="loading"><div class="spinner"></div><span>Загружено '+total+' товаров...</span></div>';
+
+      // Если меньше 100 — это последняя страница
+      if(cards.length < 100) break;
+
+      // Берём курсор для следующей страницы
+      var cur=data.cursor;
+      if(!cur||!cur.nmID) break;
+      cursor={limit:100, nmID:cur.nmID, updatedAt:cur.updatedAt};
+    }
+
+    if(!allProds.length){grid.innerHTML='<div class="loading"><span>Товаров не найдено</span></div>';return;}
     document.getElementById('prod-count').textContent=allProds.length+' товаров';
     renderProds(allProds);
+
   }catch(e){
     grid.innerHTML='';
     var msg=e.message;
