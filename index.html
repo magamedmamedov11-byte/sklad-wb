@@ -5,6 +5,90 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WB Штрихкоды</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- МОДАЛКА ОСТАТКА МАГАЗИНА -->
+<div class="overlay" id="shop-stock-modal">
+  <div class="modal" style="max-width:480px;">
+    <h2 id="ssm-title">Остаток товара</h2>
+    <div style="display:flex;gap:16px;margin-bottom:20px;align-items:flex-start;">
+      <img id="ssm-img" src="" style="width:100px;height:133px;border-radius:10px;object-fit:cover;flex-shrink:0;">
+      <div>
+        <div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;margin-bottom:4px;" id="ssm-brand"></div>
+        <div style="font-size:14px;font-weight:800;margin-bottom:6px;line-height:1.3;" id="ssm-name"></div>
+        <div style="font-size:11px;color:var(--muted);" id="ssm-nmid"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="field">
+        <label>Остаток (шт.)</label>
+        <input type="number" id="ssm-qty" placeholder="0" min="0" oninput="updateStockModalTotal()">
+      </div>
+      <div class="field">
+        <label>Мин. остаток</label>
+        <input type="number" id="ssm-min" placeholder="10" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Себестоимость (руб. за шт.)</label>
+      <input type="number" id="ssm-cost" placeholder="0" min="0" step="0.01" oninput="updateStockModalTotal()">
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;font-size:14px;color:var(--text);">
+      Сумма: <strong id="ssm-total-val" style="color:#22c55e;">0 ₽</strong>
+    </div>
+    <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-ghost" onclick="document.getElementById('shop-stock-modal').classList.remove('open')">Отмена</button>
+      <button class="btn" style="background:rgba(39,217,95,.15);color:#22c55e;border:1px solid rgba(39,217,95,.3);" onclick="openMoveShopModal()">&#8644; Движение</button>
+      <button class="btn btn-primary" onclick="saveShopStock()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА ДВИЖЕНИЯ МЕЖДУ МАГАЗИНАМИ -->
+<div class="overlay" id="move-shop-modal">
+  <div class="modal" style="max-width:460px;">
+    <h2>&#8644; Движение товара</h2>
+    <div style="background:var(--panel2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;" id="msm-info"></div>
+    <div class="field">
+      <label>Откуда</label>
+      <div style="padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;font-size:13px;color:var(--muted);" id="msm-from"></div>
+    </div>
+    <div class="field">
+      <label>Куда (выберите магазин)</label>
+      <select id="msm-to" class="task-modal-select"></select>
+    </div>
+    <div class="field">
+      <label>Количество (шт.)</label>
+      <input type="number" id="msm-qty" placeholder="1" min="1">
+    </div>
+    <div class="field">
+      <label>Комментарий (необязательно)</label>
+      <input type="text" id="msm-comment" placeholder="Например: пополнение склада">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="document.getElementById('move-shop-modal').classList.remove('open')">Отмена</button>
+      <button class="btn btn-primary" onclick="confirmMoveShop()">Переместить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ИСТОРИЯ ДВИЖЕНИЙ -->
+<div class="overlay" id="history-modal">
+  <div class="modal" style="max-width:700px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2>&#128203; История движений</h2>
+      <button class="btn btn-ghost" onclick="exportHistory()">&#8595; Excel</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <input type="date" id="hist-from" style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;">
+      <input type="date" id="hist-to" style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;">
+      <button class="btn btn-ghost" onclick="filterHistory()">Применить</button>
+    </div>
+    <div id="history-list"></div>
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="document.getElementById('history-modal').classList.remove('open')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
 :root{
@@ -663,7 +747,6 @@ header{
   <div class="nav">
     <button class="nav-btn active" id="tab-barcodes" onclick="switchTab('barcodes')">&#128230; Штрихкоды</button>
     <button class="nav-btn" id="tab-assembly" onclick="switchTab('assembly')">&#9989; Сборка</button>
-    <button class="nav-btn" id="tab-stock" onclick="switchTab('stock')">&#128200; Остатки</button>
   </div>
   <div id="role-badge" class="role-badge"></div>
 </header>
@@ -875,6 +958,90 @@ header{
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeTaskModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveTask()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА ОСТАТКА МАГАЗИНА -->
+<div class="overlay" id="shop-stock-modal">
+  <div class="modal" style="max-width:480px;">
+    <h2 id="ssm-title">Остаток товара</h2>
+    <div style="display:flex;gap:16px;margin-bottom:20px;align-items:flex-start;">
+      <img id="ssm-img" src="" style="width:100px;height:133px;border-radius:10px;object-fit:cover;flex-shrink:0;">
+      <div>
+        <div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;margin-bottom:4px;" id="ssm-brand"></div>
+        <div style="font-size:14px;font-weight:800;margin-bottom:6px;line-height:1.3;" id="ssm-name"></div>
+        <div style="font-size:11px;color:var(--muted);" id="ssm-nmid"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="field">
+        <label>Остаток (шт.)</label>
+        <input type="number" id="ssm-qty" placeholder="0" min="0" oninput="updateStockModalTotal()">
+      </div>
+      <div class="field">
+        <label>Мин. остаток</label>
+        <input type="number" id="ssm-min" placeholder="10" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Себестоимость (руб. за шт.)</label>
+      <input type="number" id="ssm-cost" placeholder="0" min="0" step="0.01" oninput="updateStockModalTotal()">
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;font-size:14px;color:var(--text);">
+      Сумма: <strong id="ssm-total-val" style="color:#22c55e;">0 ₽</strong>
+    </div>
+    <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-ghost" onclick="document.getElementById('shop-stock-modal').classList.remove('open')">Отмена</button>
+      <button class="btn" style="background:rgba(39,217,95,.15);color:#22c55e;border:1px solid rgba(39,217,95,.3);" onclick="openMoveShopModal()">&#8644; Движение</button>
+      <button class="btn btn-primary" onclick="saveShopStock()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА ДВИЖЕНИЯ МЕЖДУ МАГАЗИНАМИ -->
+<div class="overlay" id="move-shop-modal">
+  <div class="modal" style="max-width:460px;">
+    <h2>&#8644; Движение товара</h2>
+    <div style="background:var(--panel2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;" id="msm-info"></div>
+    <div class="field">
+      <label>Откуда</label>
+      <div style="padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;font-size:13px;color:var(--muted);" id="msm-from"></div>
+    </div>
+    <div class="field">
+      <label>Куда (выберите магазин)</label>
+      <select id="msm-to" class="task-modal-select"></select>
+    </div>
+    <div class="field">
+      <label>Количество (шт.)</label>
+      <input type="number" id="msm-qty" placeholder="1" min="1">
+    </div>
+    <div class="field">
+      <label>Комментарий (необязательно)</label>
+      <input type="text" id="msm-comment" placeholder="Например: пополнение склада">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="document.getElementById('move-shop-modal').classList.remove('open')">Отмена</button>
+      <button class="btn btn-primary" onclick="confirmMoveShop()">Переместить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ИСТОРИЯ ДВИЖЕНИЙ -->
+<div class="overlay" id="history-modal">
+  <div class="modal" style="max-width:700px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2>&#128203; История движений</h2>
+      <button class="btn btn-ghost" onclick="exportHistory()">&#8595; Excel</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <input type="date" id="hist-from" style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;">
+      <input type="date" id="hist-to" style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;">
+      <button class="btn btn-ghost" onclick="filterHistory()">Применить</button>
+    </div>
+    <div id="history-list"></div>
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="document.getElementById('history-modal').classList.remove('open')">Закрыть</button>
     </div>
   </div>
 </div>
